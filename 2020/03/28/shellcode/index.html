@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,minimum-scale=1,maximum-scale=1">
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+  <meta name="description" content="Shellcode"/>
+
+
+
+
+  <meta name="keywords" content="pwn," />
+
+
+
+
+
+  <link rel="alternate" href="/default" title="时间煮雨">
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=1.1" />
+
+
+
+<link rel="canonical" href="http://yoursite.com/2020/03/28/shellcode/"/>
+
+
+<meta name="description" content="本文为《由浅入深理解shellcode》系列文章第一篇，记录下自己学习的过程和体会。系列文章会持续更更新，从不同角度学习shellcode的原理。 0x01 什么是shellcode我们见到的shellcode是这样的   简单来说，shellcode就是一段可以获取shell的代码。 复杂点说，shellcode是一段通过中断程序执行改写寄存器值而获取shell（系统调用）的机器码。 分解一下这">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Shellcode">
+<meta property="og:url" content="http://yoursite.com/2020/03/28/shellcode/index.html">
+<meta property="og:site_name" content="时间煮雨">
+<meta property="og:description" content="本文为《由浅入深理解shellcode》系列文章第一篇，记录下自己学习的过程和体会。系列文章会持续更更新，从不同角度学习shellcode的原理。 0x01 什么是shellcode我们见到的shellcode是这样的   简单来说，shellcode就是一段可以获取shell的代码。 复杂点说，shellcode是一段通过中断程序执行改写寄存器值而获取shell（系统调用）的机器码。 分解一下这">
+<meta property="og:locale" content="zh">
+<meta property="og:image" content="http://yoursite.com/2020/03/28/shellcode/shellcode.png">
+<meta property="og:image" content="http://yoursite.com/2020/03/28/shellcode/syscall.png">
+<meta property="og:image" content="http://yoursite.com/2020/03/28/shellcode/nasm.png">
+<meta property="article:published_time" content="2020-03-28T13:39:45.000Z">
+<meta property="article:modified_time" content="2020-03-28T18:12:51.044Z">
+<meta property="article:author" content="1997CN">
+<meta property="article:tag" content="pwn">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/2020/03/28/shellcode/shellcode.png">
+
+
+<link rel="stylesheet" type="text/css" href="/css/style.css?v=1.1" />
+<link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet'>
+
+
+  <link rel="stylesheet" type="text/css" href="/lib/fancybox/jquery.fancybox.css" />
+
+
+
+
+<script type="text/javascript">
+  var themeConfig = {
+    fancybox: {
+      enable: true
+    },
+  };
+</script>
+
+
+
+
+  
+
+
+
+    <title> Shellcode - 时间煮雨 </title>
+  <meta name="generator" content="Hexo 4.2.0"></head>
+
+  <body>
+    <div id="page">
+      <header id="masthead"><div class="site-header-inner">
+    <h1 class="site-title">
+        <a href="/." class="logo">时间煮雨</a>
+    </h1>
+
+    <nav id="nav-top">
+        
+            <ul id="menu-top" class="nav-top-items">
+                
+                    <li class="menu-item">
+                        <a href="/archives">
+                            
+                            
+                                Archives
+                            
+                        </a>
+                    </li>
+                
+                    <li class="menu-item">
+                        <a href="/about">
+                            
+                            
+                                About
+                            
+                        </a>
+                    </li>
+                
+            </ul>
+        
+  </nav>
+</div>
+
+      </header>
+      <div id="content">
+        
+    <div id="primary">
+        
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">
+        
+          Shellcode
+        
+      </h1>
+
+      <time class="post-time">
+          Mar 28 2020
+      </time>
+    </header>
+
+
+
+    
+            <div class="post-content">
+            <p>本文为《由浅入深理解shellcode》系列文章第一篇，记录下自己学习的过程和体会。系列文章会持续更更新，从不同角度学习shellcode的原理。</p>
+<h3 id="0x01-什么是shellcode"><a href="#0x01-什么是shellcode" class="headerlink" title="0x01 什么是shellcode"></a>0x01 什么是shellcode</h3><p>我们见到的shellcode是这样的</p>
+<img src="/2020/03/28/shellcode/shellcode.png" style="zoom:60%;">
+
+<p>简单来说，shellcode就是一段可以获取shell的代码。</p>
+<p>复杂点说，shellcode是一段通过中断程序执行改写寄存器值而<strong>获取shell（系统调用）</strong>的机器码。</p>
+<p>分解一下这段话：</p>
+<ol>
+<li>shellcode 获取 shell （结果）</li>
+<li>中断程序执行改写寄存器的值（功能实现过程）</li>
+</ol>
+<p><strong>不同位数的程序实现shellcode的方式不同</strong></p>
+<blockquote>
+<p>linux 32位 ： init0x80 中断实现execve系统调用</p>
+<p>linux 64位：  syscall 中断实现execve系统调用</p>
+</blockquote>
+<h3 id="0x02-shellcode实现分步来看"><a href="#0x02-shellcode实现分步来看" class="headerlink" title="0x02 shellcode实现分步来看"></a>0x02 shellcode实现分步来看</h3><h4 id="0x021-系统调用过程"><a href="#0x021-系统调用过程" class="headerlink" title="0x021 系统调用过程"></a>0x021 系统调用过程</h4><p>首先我们来认识一下 <code>int 0x80</code> (Intel CPU)</p>
+<p>程序为什么会执行我们所设定的系统调用呢？程序在执行的过程中会有两种状态，用户态(User Mode)和内核态(Kernel Mode)，而这两种状态的关系是怎么样的呢？我们拿一张图来说明。<br><img src="/2020/03/28/shellcode/syscall.png" alt></p>
+<blockquote>
+<p>名词解释：</p>
+<p><strong>System call Invocation in Application program</strong> ： 在应用程序中调用系统调用</p>
+<p><strong>Wrapper routine In libc standard Library</strong> ：在libc标准库中封装例程</p>
+<p><strong>System call handler</strong> ：系统调用处理程序</p>
+<p><strong>System call Service routine</strong> ：系统调用服务例程</p>
+</blockquote>
+<p>如上图，系统调用执行的流程如下：</p>
+<ol>
+<li><strong>应用程序</strong> 代码调用系统调用( <em>xyz</em> )，该函数是一个包装系统调用的 <strong>库函数</strong> ；</li>
+<li><strong>库函数</strong> ( <em>xyz</em> )负责准备向内核传递的参数，并触发 <strong>软中断(int 0x80)</strong> 以切换到内核；</li>
+<li><em>CPU</em> 被 <strong>软中断</strong> 打断后，执行 <strong>中断处理函数</strong> ，即 <strong>系统调用处理函数</strong> ( <em>system_call</em>)；</li>
+<li><strong>系统调用处理函数</strong> 调用 <strong>系统调用服务例程</strong> ( <em>sys_xyz</em> )，真正开始处理该系统调用；</li>
+</ol>
+<p>那么系统调用是如何区分<strong>系统调用函数</strong>的呢？是通过<strong>系统调用号</strong>来区分的，不同位数的操作系统的<strong>系统调用号</strong>不同。<strong>系统调用号</strong>一般通过==eax==寄存器传递，<strong>用户进程</strong>传递<strong>系统调用号</strong>给<strong>系统调用处理函数</strong>以调用<strong>系统调用</strong>。</p>
+<p>查看系统调用号</p>
+<p>linux下32位系统调用号<br><code>cat /usr/include/asm/unistd_32.h</code></p>
+<p>linux下64位系统调用号<br><code>cat /usr/include/asm/unistd_64.h</code></p>
+<p>举例一下常见的系统调用号</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">linux下32位系统调用号  </span><br><span class="line">#define __NR_restart_syscall 0</span><br><span class="line">#define __NR_exit 1</span><br><span class="line">#define __NR_fork 2</span><br><span class="line">#define __NR_read 3</span><br><span class="line">#define __NR_write 4</span><br><span class="line">#define __NR_open 5</span><br><span class="line">#define __NR_close 6</span><br><span class="line">#define __NR_waitpid 7</span><br><span class="line">#define __NR_creat 8</span><br><span class="line">#define __NR_link 9</span><br><span class="line">#define __NR_unlink 10</span><br><span class="line">#define __NR_execve 11     # execve系统调用</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">linux下64位系统调用号 </span><br><span class="line">#define __NR_getsockname 51</span><br><span class="line">#define __NR_getpeername 52</span><br><span class="line">#define __NR_socketpair 53</span><br><span class="line">#define __NR_setsockopt 54</span><br><span class="line">#define __NR_getsockopt 55</span><br><span class="line">#define __NR_clone 56</span><br><span class="line">#define __NR_fork 57</span><br><span class="line">#define __NR_vfork 58</span><br><span class="line">#define __NR_execve 59     # execve系统调用</span><br><span class="line">#define __NR_exit 60</span><br></pre></td></tr></table></figure>
+
+<h4 id="0x022-shellcode载入（init-0x80-中断实现execve过程）"><a href="#0x022-shellcode载入（init-0x80-中断实现execve过程）" class="headerlink" title="0x022 shellcode载入（init 0x80 中断实现execve过程）"></a>0x022 shellcode载入（init 0x80 中断实现execve过程）</h4><p><strong>execve函数说明</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># 函数定义</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">execve</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *filename, <span class="keyword">char</span> *<span class="keyword">const</span> argv[ ], <span class="keyword">char</span> *<span class="keyword">const</span> envp[ ])</span></span>;</span><br><span class="line"># 返回值 函数执行成功时没有返回值，执行失败时的返回值为<span class="number">-1.</span></span><br><span class="line"><span class="comment">/* 参数说明 </span></span><br><span class="line"><span class="comment">filename字符串所代表的文件路径</span></span><br><span class="line"><span class="comment">argv[] 是利用数组指针来传递给执行文件，并且需要以空指针(NULL)结束</span></span><br><span class="line"><span class="comment">envp[] 为传递给执行文件的新环境变量数组</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
+
+<p>通过上面来看我们需要传递4个参数【调用号、filename、argv[]、envp[]】来实现execve系统调用</p>
+<blockquote>
+<p>ebx, ecx, edx　分别代表第１，２，３个参数</p>
+</blockquote>
+<p>参数设置</p>
+<blockquote>
+<p>系统调用号为11，放在eax中</p>
+<p>filename 为’/bin/sh/’放在ebx中</p>
+<p>argv[] 不需要向程序传参，所以ecx设置为0</p>
+<p>envp[] 没有新环境变量，所以edx设置为 0</p>
+</blockquote>
+<p>将参数传递给系统调用处理函数即可</p>
+<h4 id="0x023-shellcode编写"><a href="#0x023-shellcode编写" class="headerlink" title="0x023 shellcode编写"></a>0x023 shellcode编写</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">global _start</span><br><span class="line">_start:</span><br><span class="line">xor eax,eax ;将eax赋值为0</span><br><span class="line">push eax ;将 0 入栈</span><br><span class="line">push 0x68732f2f</span><br><span class="line">push 0x6e69622f ;将&#x2F;bin&#x2F;sh&#x2F;存入栈中</span><br><span class="line">mov ebx,esp ;将字符串地址赋值给ebx</span><br><span class="line">xor ecx,ecx ;ecx置0</span><br><span class="line">xor edx,edx ;edx置0</span><br><span class="line">mov al,0xb ;0xb就是11</span><br><span class="line">int 0x80 ;系统调用</span><br></pre></td></tr></table></figure>
+
+<p>对shellcode进行编译链接，看到shellcode执行成功</p>
+<img src="/2020/03/28/shellcode/nasm.png" style="zoom:60%;">
+
+<h4 id="0x023-shellcode机器码提取"><a href="#0x023-shellcode机器码提取" class="headerlink" title="0x023 shellcode机器码提取"></a>0x023 shellcode机器码提取</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">objdump -d ./shellcode|grep '[0-9a-f]:'|grep -v 'file'|cut -f2 -d:|cut -f1-6 -d' '|tr -s ' '|tr '\t' ' '|sed 's/ $//g'|sed 's/ /\\x/g'|paste -d '' -s |sed 's/^/"/'|sed 's/$/"/g'</span><br></pre></td></tr></table></figure>
+
+<p>提取到的机器码</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">"\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\x31\xd2\xb0\x0b\xcd\x80"</span><br></pre></td></tr></table></figure>
+
+<h4 id="0x024-shellcode加载（c语言实现）"><a href="#0x024-shellcode加载（c语言实现）" class="headerlink" title="0x024 shellcode加载（c语言实现）"></a>0x024 shellcode加载（c语言实现）</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="keyword">unsigned</span> <span class="keyword">char</span> code[] = \</span><br><span class="line"><span class="string">"\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80"</span>;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">"Shellcode Length:\n"</span>);</span><br><span class="line">  <span class="keyword">int</span> (*ret)() = (<span class="keyword">int</span>(*)())code;</span><br><span class="line">  ret();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在这里遇到了问题，暂未解决</p>
+<h3 id="0x03-总结"><a href="#0x03-总结" class="headerlink" title="0x03 总结"></a>0x03 总结</h3><p>shellcode的实现和加载都是通过系统调用完成的，所以掌握扎实的基础知识还是很有必要的</p>
+<p>作者比较菜，欢迎大佬指正</p>
+<h3 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h3><p><a href="https://xz.aliyun.com/t/2052" target="_blank" rel="noopener">https://xz.aliyun.com/t/2052</a></p>
+<p><a href="https://learn-linux.readthedocs.io/zh_CN/latest/system-programming/syscall/principle.html" target="_blank" rel="noopener">https://learn-linux.readthedocs.io/zh_CN/latest/system-programming/syscall/principle.html</a></p>
+
+            </div>
+          
+
+    
+      <footer class="post-footer">
+		
+		<div class="post-tags">
+		  
+			<a href="/tags/pwn/">pwn</a>
+		  
+		</div>
+		
+
+        
+        
+  <nav class="post-nav">
+    
+    
+      <a class="next" href="/2020/03/27/%E5%B7%AE%E8%B7%9D/">
+        <span class="next-text nav-default">差距</span>
+        <span class="prev-text nav-mobile">Next</span>
+        <i class="iconfont icon-right"></i>
+      </a>
+    
+  </nav>
+
+        
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+      </footer>
+    
+  </article>
+
+    </div>
+
+      </div>
+
+      <footer id="colophon"><span class="copyright-year">
+    
+        &copy;
+    
+        2019 -
+    
+    2020
+    <span class="footer-author">1997CN.</span>
+</span>
+
+      </footer>
+
+      <div class="back-to-top" id="back-to-top">
+        <i class="iconfont icon-up"></i>
+      </div>
+    </div>
+    
+
+
+    
+  
+
+
+
+
+
+  
+    <script type="text/javascript" src="/lib/jquery/jquery-3.1.1.min.js"></script>
+  
+
+  
+    <script type="text/javascript" src="/lib/fancybox/jquery.fancybox.pack.js"></script>
+  
+
+    <script type="text/javascript" src="/js/src/theme.js?v=1.1"></script>
+<script type="text/javascript" src="/js/src/bootstrap.js?v=1.1"></script>
+
+  </body>
+</html>
