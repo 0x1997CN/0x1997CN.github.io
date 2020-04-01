@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,minimum-scale=1,maximum-scale=1">
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+  <meta name="description" content="C语言函数调用栈"/>
+
+
+
+
+  <meta name="keywords" content="c," />
+
+
+
+
+
+  <link rel="alternate" href="/default" title="时间煮雨">
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=1.1" />
+
+
+
+<link rel="canonical" href="http://yoursite.com/2020/03/29/function-c/"/>
+
+
+<meta name="description" content="0x01 背景学习clover_toeic的文章后，根据作者的文章环境和自己的环境来写自己对C语言函数调用栈的理解。 0x02 前置知识0x021 寄存器以32位寄存器为例    32 （通用寄存器） 16 高8 低8    EAX AX AH AL   EBX BX BH BL   ECX CX CH CL   EDX DX DH DL      32 16    ESI  （变址寄存器） SI">
+<meta property="og:type" content="article">
+<meta property="og:title" content="C语言函数调用栈">
+<meta property="og:url" content="http://yoursite.com/2020/03/29/function-c/index.html">
+<meta property="og:site_name" content="时间煮雨">
+<meta property="og:description" content="0x01 背景学习clover_toeic的文章后，根据作者的文章环境和自己的环境来写自己对C语言函数调用栈的理解。 0x02 前置知识0x021 寄存器以32位寄存器为例    32 （通用寄存器） 16 高8 低8    EAX AX AH AL   EBX BX BH BL   ECX CX CH CL   EDX DX DH DL      32 16    ESI  （变址寄存器） SI">
+<meta property="og:locale" content="zh">
+<meta property="og:image" content="http://yoursite.com/2020/03/29/function-c/271644419475745.jpg">
+<meta property="article:published_time" content="2020-03-29T13:49:27.000Z">
+<meta property="article:modified_time" content="2020-04-01T12:39:15.026Z">
+<meta property="article:author" content="1997CN">
+<meta property="article:tag" content="c">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/2020/03/29/function-c/271644419475745.jpg">
+
+
+<link rel="stylesheet" type="text/css" href="/css/style.css?v=1.1" />
+<link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet'>
+
+
+  <link rel="stylesheet" type="text/css" href="/lib/fancybox/jquery.fancybox.css" />
+
+
+
+
+<script type="text/javascript">
+  var themeConfig = {
+    fancybox: {
+      enable: true
+    },
+  };
+</script>
+
+
+
+
+  
+
+
+
+    <title> C语言函数调用栈 - 时间煮雨 </title>
+  <meta name="generator" content="Hexo 4.2.0"></head>
+
+  <body>
+    <div id="page">
+      <header id="masthead"><div class="site-header-inner">
+    <h1 class="site-title">
+        <a href="/." class="logo">时间煮雨</a>
+    </h1>
+
+    <nav id="nav-top">
+        
+            <ul id="menu-top" class="nav-top-items">
+                
+                    <li class="menu-item">
+                        <a href="/archives">
+                            
+                            
+                                Archives
+                            
+                        </a>
+                    </li>
+                
+                    <li class="menu-item">
+                        <a href="/about">
+                            
+                            
+                                About
+                            
+                        </a>
+                    </li>
+                
+            </ul>
+        
+  </nav>
+</div>
+
+      </header>
+      <div id="content">
+        
+    <div id="primary">
+        
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">
+        
+          C语言函数调用栈
+        
+      </h1>
+
+      <time class="post-time">
+          Mar 29 2020
+      </time>
+    </header>
+
+
+
+    
+            <div class="post-content">
+            <h3 id="0x01-背景"><a href="#0x01-背景" class="headerlink" title="0x01 背景"></a>0x01 背景</h3><p>学习<a href="https://www.cnblogs.com/clover-toeic/" target="_blank" rel="noopener">clover_toeic</a>的文章后，根据作者的文章环境和自己的环境来写自己对C语言函数调用栈的理解。</p>
+<h3 id="0x02-前置知识"><a href="#0x02-前置知识" class="headerlink" title="0x02 前置知识"></a>0x02 前置知识</h3><h4 id="0x021-寄存器"><a href="#0x021-寄存器" class="headerlink" title="0x021 寄存器"></a>0x021 寄存器</h4><p>以32位寄存器为例</p>
+<table>
+<thead>
+<tr>
+<th>32 （通用寄存器）</th>
+<th>16</th>
+<th>高8</th>
+<th>低8</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>EAX</td>
+<td>AX</td>
+<td>AH</td>
+<td>AL</td>
+</tr>
+<tr>
+<td>EBX</td>
+<td>BX</td>
+<td>BH</td>
+<td>BL</td>
+</tr>
+<tr>
+<td>ECX</td>
+<td>CX</td>
+<td>CH</td>
+<td>CL</td>
+</tr>
+<tr>
+<td>EDX</td>
+<td>DX</td>
+<td>DH</td>
+<td>DL</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th align="left">32</th>
+<th align="left">16</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">ESI  （变址寄存器）</td>
+<td align="left">SI</td>
+</tr>
+<tr>
+<td align="left">EDI （变址寄存器）</td>
+<td align="left">DI</td>
+</tr>
+<tr>
+<td align="left">EBP （指针寄存器）</td>
+<td align="left">BP</td>
+</tr>
+<tr>
+<td align="left">ESP （指针寄存器）</td>
+<td align="left">SP</td>
+</tr>
+<tr>
+<td align="left">EIP （指令指针寄存器）</td>
+<td align="left">IP</td>
+</tr>
+<tr>
+<td align="left">EFLAG（标志寄存器）</td>
+<td align="left">NULL</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>call 和 ret指令可以改变EIP寄存器</p>
+<p>call指令（将控制权从主调函数移交给被调函数）实现的是：将call的下一条指令压栈，将EIP指向被调函数内第一条指令待函数调用结束后恢复调用现场。</p>
+<p>ret指令（将控制权从被调函数移交给主调函数）实现的是：将EIP出栈，继续程序的执行</p>
+</blockquote>
+<p><strong>寄存器使用约定</strong></p>
+<blockquote>
+<p>根据惯例，寄存器%eax、%edx和%ecx为主调函数保存寄存器(caller-saved registers)，当函数调用时，若主调函数希望保持这些寄存器的值，则必须在调用前显式地将其保存在栈中；被调函数可以覆盖这些寄存器，而不会破坏主调函数所需的数据。寄存器%ebx、%esi和%edi为被调函数保存寄存器(callee-saved registers)，即被调函数在覆盖这些寄存器的值时，必须先将寄存器原值压入栈中保存起来，并在函数返回前从栈中恢复其原值，因为主调函数可能也在使用这些寄存器。此外，被调函数必须保持寄存器%ebp和%esp，并在函数返回后将其恢复到调用前的值，亦即必须恢复主调函数的栈帧。</p>
+</blockquote>
+<h4 id="0x022-栈帧"><a href="#0x022-栈帧" class="headerlink" title="0x022 栈帧"></a>0x022 栈帧</h4><p>每个函数都会有一片空间用作当前函数使用这段区域叫做栈帧</p>
+<p>栈帧的界定是由栈基指针和栈顶指针共同完成</p>
+<img src="/2020/03/29/function-c/271644419475745.jpg" alt="271644419475745" style="zoom:80%;">
+
+<p>图中我们可以看到在<strong>stack Frame of caller Function</strong>栈帧中函数参数的入栈顺序是按照cdecal的规则(从右向左)进行的</p>
+<p>而在<strong>stack Frame of callee Function</strong>栈帧中看到的一部分数据是按照从左向右入栈的，因为这段数据是局部变量的数据，<strong>函数调用约定</strong>规定了参数的入栈顺序，但是<strong>未规定局部变量的入栈顺序</strong>。</p>
+<p><strong>局部变量的入栈顺序</strong></p>
+<blockquote>
+<p>在没有栈溢出保护机制下编译时，所有局部变量按系统为局部变量申请内存中栈空间的顺序，即：先申请哪个变量，哪个先入栈，正向的。也就是说，编译器给变量空间的申请是直接按照变量申请顺序执行的</p>
+<p>在有栈溢出保护机制下编译时，入栈顺序有所改变，先按照类型划分，再按照定义变量的先后顺序划分，即：char型先申请，int类型后申请（与编译器溢出保护时的规定相关）；然后栈空间的申请顺序与代码中变量定义顺序相反（后定义的先入栈）</p>
+</blockquote>
+<h4 id="0x023-堆栈"><a href="#0x023-堆栈" class="headerlink" title="0x023 堆栈"></a>0x023 堆栈</h4><p><strong>函数序</strong></p>
+<table>
+<thead>
+<tr>
+<th>push %ebp</th>
+<th>将主调函数的帧基指针%ebp压栈，即保存旧栈帧中的帧基指针以便函数返回时恢复旧栈帧</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>mov %esp, %ebp</td>
+<td>将主调函数的栈顶指针%esp赋给被调函数帧基指针%ebp。此时，%ebp指向被调函数新栈帧的起始地址(栈底)，亦即旧%ebp入栈后的栈顶</td>
+</tr>
+<tr>
+<td>sub <n>, %esp</n></td>
+<td>将栈顶指针%esp减去指定字节数(栈顶下移)，即为被调函数局部变量开辟栈空间。<n>为立即数且通常为16的整数倍(可能大于局部变量字节总数而稍显浪费，但gcc采用该规则保证数据的严格对齐以有效运用各种优化编译技术)</n></td>
+</tr>
+<tr>
+<td>push <r></r></td>
+<td>可选。如有必要，被调函数负责保存某些寄存器(%edi/%esi/%ebx)值</td>
+</tr>
+</tbody></table>
+<p>函数</p>
+<table>
+<thead>
+<tr>
+<th>pop <r></r></th>
+<th>可选。如有必要，被调函数负责恢复某些寄存器(%edi/%esi/%ebx)值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>mov %ebp, %esp*</td>
+<td>恢复主调函数的栈顶指针%esp，将其指向被调函数栈底。此时，局部变量占用的栈空间被释放，但变量内容未被清除(跳过该处理)</td>
+</tr>
+<tr>
+<td>pop %ebp*</td>
+<td>主调函数的帧基指针%ebp出栈，即恢复主调函数栈底。此时，栈顶指针%esp指向主调函数栈顶(espßesp-4)，亦即返回地址存放处</td>
+</tr>
+<tr>
+<td>ret</td>
+<td>从栈顶弹出主调函数压在栈中的返回地址到指令指针寄存器%eip中，跳回主调函数该位置处继续执行。再由主调函数恢复到调用前的栈</td>
+</tr>
+</tbody></table>
+<h3 id="0x03-函数调用约定"><a href="#0x03-函数调用约定" class="headerlink" title="0x03 函数调用约定"></a>0x03 函数调用约定</h3><h4 id="0x031-函数调用约定"><a href="#0x031-函数调用约定" class="headerlink" title="0x031 函数调用约定"></a>0x031 函数调用约定</h4><p>在一个栈帧中，最重要的部分是如何进行参数的传递，而参数传递的过程是由函数调用约定所决定的。</p>
+<blockquote>
+<p>函数调用约定通常规定如下几方面内容：</p>
+<p>   1) 函数参数的传递顺序和方式</p>
+<p>   最常见的参数传递方式是通过堆栈传递。主调函数将参数压入栈中，被调函数以相对于帧基指针的正偏移量来访问栈中的参数。对于有多个参数的函数，调用约定需规定主调函数将参数压栈的顺序(从左至右还是从右至左)。某些调用约定允许使用寄存器传参以提高性能。</p>
+<p>   2) 栈的维护方式</p>
+<p>   主调函数将参数压栈后调用被调函数体，返回时需将被压栈的参数全部弹出，以便将栈恢复到调用前的状态。该清栈过程可由主调函数负责完成，也可由被调函数负责完成。</p>
+<p>   3) 名字修饰(Name-mangling)策略</p>
+<p>   又称函数名修饰(Decorated Name)规则。编译器在链接时为区分不同函数，对函数名作不同修饰。</p>
+<p>   若函数之间的调用约定不匹配，可能会产生堆栈异常或链接错误等问题。因此，为了保证程序能正确执行，所有的函数调用均应遵守一致的调用约定。</p>
+</blockquote>
+<h4 id="0x032-常见的函数调用约定"><a href="#0x032-常见的函数调用约定" class="headerlink" title="0x032 常见的函数调用约定"></a>0x032 常见的函数调用约定</h4><h5 id="0x0321-cdecal"><a href="#0x0321-cdecal" class="headerlink" title="0x0321 cdecal"></a>0x0321 cdecal</h5><blockquote>
+<p>   又称C调用约定，是C/C++编译器默认的函数调用约定。所有非C++成员函数和未使用stdcall或fastcall声明的函数都默认是cdecl方式。函数参数按照从右到左的顺序入栈，函数调用者负责清除栈中的参数，返回值在EAX中。由于每次函数调用都要产生清除(还原)堆栈的代码，故使用cdecl方式编译的程序比使用stdcall方式编译的程序大(后者仅需在被调函数内产生一份清栈代码)。但cdecl调用方式支持可变参数函数(即函数带有可变数目的参数，如printf)，且调用时即使实参和形参数目不符也不会导致堆栈错误。对于C函数，cdecl方式的名字修饰约定是在函数名前添加一个下划线；对于C++函数，除非特别使用extern “C”，C++函数使用不同的名字修饰方式。</p>
+</blockquote>
+<h5 id="0x0322-stdcall"><a href="#0x0322-stdcall" class="headerlink" title="0x0322 stdcall"></a>0x0322 stdcall</h5><blockquote>
+<p> Pascal程序缺省调用方式，WinAPI也多采用该调用约定。stdcall调用约定主调函数参数从右向左入栈，除指针或引用类型参数外所有参数采用传值方式传递，由被调函数负责清除栈中的参数，返回值在EAX中。stdcall调用约定仅适用于参数个数固定的函数，因为被调函数清栈时无法精确获知栈上有多少函数参数；而且如果调用时实参和形参数目不符会导致堆栈错误。对于C函数，stdcall名称修饰方式是在函数名字前添加下划线，在函数名字后添加@和函数参数的大小，如_functionname@number。</p>
+</blockquote>
+<h3 id="0x4-参数传递方式"><a href="#0x4-参数传递方式" class="headerlink" title="0x4 参数传递方式"></a>0x4 参数传递方式</h3><p>64位汇编</p>
+<p>当参数少于7个时， 参数从左到右放入寄存器: rdi, rsi, rdx, rcx, r8, r9。</p>
+<p>当参数为7个以上时， 前 6 个与前面一样， 但后面的依次从 “右向左” 放入栈中，即和32位汇编一样。</p>
+<p>参数个数大于 7 个的时候</p>
+<p>H(a, b, c, d, e, f, g, h);</p>
+<p>a-&gt;%rdi, b-&gt;%rsi, c-&gt;%rdx, d-&gt;%rcx, e-&gt;%r8, f-&gt;%r9</p>
+<p>h-&gt;8(%esp)</p>
+<p>g-&gt;(%esp)</p>
+<h3 id="0x05-总结"><a href="#0x05-总结" class="headerlink" title="0x05 总结"></a>0x05 总结</h3><p><a href="https://www.cnblogs.com/clover-toeic/" target="_blank" rel="noopener">clover_toeic</a>的文章挺好的，总结的很全面，还有些地方没太理解，再理解一下再来更新博客叭～</p>
+<h3 id="0x06-参考"><a href="#0x06-参考" class="headerlink" title="0x06 参考"></a>0x06 参考</h3><p><a href="https://www.cnblogs.com/clover-toeic/p/3755401.html" target="_blank" rel="noopener">https://www.cnblogs.com/clover-toeic/p/3755401.html</a></p>
+<p><a href="https://www.cnblogs.com/clover-toeic/p/3756668.html" target="_blank" rel="noopener">https://www.cnblogs.com/clover-toeic/p/3756668.html</a></p>
+
+            </div>
+          
+
+    
+      <footer class="post-footer">
+		
+		<div class="post-tags">
+		  
+			<a href="/tags/c/">c</a>
+		  
+		</div>
+		
+
+        
+        
+  <nav class="post-nav">
+    
+    
+      <a class="next" href="/2020/03/28/shellcode/">
+        <span class="next-text nav-default">Shellcode</span>
+        <span class="prev-text nav-mobile">Next</span>
+        <i class="iconfont icon-right"></i>
+      </a>
+    
+  </nav>
+
+        
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+      </footer>
+    
+  </article>
+
+    </div>
+
+      </div>
+
+      <footer id="colophon"><span class="copyright-year">
+    
+        &copy;
+    
+        2019 -
+    
+    2020
+    <span class="footer-author">1997CN.</span>
+</span>
+
+      </footer>
+
+      <div class="back-to-top" id="back-to-top">
+        <i class="iconfont icon-up"></i>
+      </div>
+    </div>
+    
+
+
+    
+  
+
+
+
+
+
+  
+    <script type="text/javascript" src="/lib/jquery/jquery-3.1.1.min.js"></script>
+  
+
+  
+    <script type="text/javascript" src="/lib/fancybox/jquery.fancybox.pack.js"></script>
+  
+
+    <script type="text/javascript" src="/js/src/theme.js?v=1.1"></script>
+<script type="text/javascript" src="/js/src/bootstrap.js?v=1.1"></script>
+
+  </body>
+</html>
