@@ -44,7 +44,7 @@
 <meta property="og:locale" content="zh">
 <meta property="og:image" content="http://yoursite.com/2020/03/29/function-c/271644419475745.jpg">
 <meta property="article:published_time" content="2020-03-29T13:49:27.000Z">
-<meta property="article:modified_time" content="2020-04-01T12:39:15.026Z">
+<meta property="article:modified_time" content="2020-04-02T07:57:25.668Z">
 <meta property="article:author" content="1997CN">
 <meta property="article:tag" content="c">
 <meta name="twitter:card" content="summary">
@@ -282,8 +282,8 @@
 <p> Pascal程序缺省调用方式，WinAPI也多采用该调用约定。stdcall调用约定主调函数参数从右向左入栈，除指针或引用类型参数外所有参数采用传值方式传递，由被调函数负责清除栈中的参数，返回值在EAX中。stdcall调用约定仅适用于参数个数固定的函数，因为被调函数清栈时无法精确获知栈上有多少函数参数；而且如果调用时实参和形参数目不符会导致堆栈错误。对于C函数，stdcall名称修饰方式是在函数名字前添加下划线，在函数名字后添加@和函数参数的大小，如_functionname@number。</p>
 </blockquote>
 <h3 id="0x4-参数传递方式"><a href="#0x4-参数传递方式" class="headerlink" title="0x4 参数传递方式"></a>0x4 参数传递方式</h3><p>64位汇编</p>
-<p>当参数少于7个时， 参数从左到右放入寄存器: rdi, rsi, rdx, rcx, r8, r9。</p>
-<p>当参数为7个以上时， 前 6 个与前面一样， 但后面的依次从 “右向左” 放入栈中，即和32位汇编一样。</p>
+<p>当<strong>参数少于7个</strong>时， 参数从<strong>左到右</strong>放入寄存器: rdi, rsi, rdx, rcx, r8, r9。</p>
+<p>当<strong>参数为7个以上</strong>时， 前 6 个与前面一样， 但后面的依次从 “<strong>右向左</strong>” 放入栈中，即和32位汇编一样。</p>
 <p>参数个数大于 7 个的时候</p>
 <p>H(a, b, c, d, e, f, g, h);</p>
 <p>a-&gt;%rdi, b-&gt;%rsi, c-&gt;%rdx, d-&gt;%rcx, e-&gt;%r8, f-&gt;%r9</p>
