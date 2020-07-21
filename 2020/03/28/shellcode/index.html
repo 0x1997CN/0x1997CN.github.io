@@ -1,143 +1,103 @@
+
 <!DOCTYPE html>
 <html lang="zh">
-  <head>
-    
-<meta charset="UTF-8"/>
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,minimum-scale=1,maximum-scale=1">
 
 
-<meta http-equiv="Cache-Control" content="no-transform" />
-<meta http-equiv="Cache-Control" content="no-siteapp" />
-
-
-
-  <meta name="description" content="Shellcode"/>
-
-
-
-
-  <meta name="keywords" content="pwn," />
-
-
-
-
-
-  <link rel="alternate" href="/default" title="时间煮雨">
-
-
-
-
-  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=1.1" />
-
-
-
-<link rel="canonical" href="http://yoursite.com/2020/03/28/shellcode/"/>
-
-
-<meta name="description" content="本文为《由浅入深理解shellcode》系列文章第一篇，记录下自己学习的过程和体会。系列文章会持续更更新，从不同角度学习shellcode的原理。 0x01 什么是shellcode我们见到的shellcode是这样的   简单来说，shellcode就是一段可以获取权限的代码。 复杂点说，shellcode是一段通过中断程序执行改写寄存器值而获取权限（系统调用）的机器码。 分解一下这段话：  s">
-<meta property="og:type" content="article">
-<meta property="og:title" content="Shellcode">
-<meta property="og:url" content="http://yoursite.com/2020/03/28/shellcode/index.html">
-<meta property="og:site_name" content="时间煮雨">
-<meta property="og:description" content="本文为《由浅入深理解shellcode》系列文章第一篇，记录下自己学习的过程和体会。系列文章会持续更更新，从不同角度学习shellcode的原理。 0x01 什么是shellcode我们见到的shellcode是这样的   简单来说，shellcode就是一段可以获取权限的代码。 复杂点说，shellcode是一段通过中断程序执行改写寄存器值而获取权限（系统调用）的机器码。 分解一下这段话：  s">
-<meta property="og:locale" content="zh">
-<meta property="og:image" content="http://yoursite.com/2020/03/28/shellcode/shellcode.png">
-<meta property="og:image" content="http://yoursite.com/2020/03/28/shellcode/syscall.png">
-<meta property="og:image" content="http://yoursite.com/2020/03/28/shellcode/nasm.png">
-<meta property="og:image" content="http://yoursite.com/2020/03/28/shellcode/gcc.png">
-<meta property="article:published_time" content="2020-03-28T13:39:45.000Z">
-<meta property="article:modified_time" content="2020-04-02T07:14:19.058Z">
-<meta property="article:author" content="1997CN">
-<meta property="article:tag" content="pwn">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://yoursite.com/2020/03/28/shellcode/shellcode.png">
-
-
-<link rel="stylesheet" type="text/css" href="/css/style.css?v=1.1" />
-<link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet'>
-
-
-  <link rel="stylesheet" type="text/css" href="/lib/fancybox/jquery.fancybox.css" />
-
-
-
-
-<script type="text/javascript">
-  var themeConfig = {
-    fancybox: {
-      enable: true
-    },
-  };
-</script>
-
-
-
-
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020"/>
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="pwn," />
   
 
+  
+    <meta name="description" content="Shellcode" />
+  
+  
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <title>Shellcode [ 时间煮雨 ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+<meta name="generator" content="Hexo 4.2.0"></head>
 
 
-    <title> Shellcode - 时间煮雨 </title>
-  <meta name="generator" content="Hexo 4.2.0"></head>
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    <img class="avatar" src="http://localhost:4000/images/logo.png">
+    <span class="title">时间煮雨</span>
+  </a>
 
-  <body>
-    <div id="page">
-      <header id="masthead"><div class="site-header-inner">
-    <h1 class="site-title">
-        <a href="/." class="logo">时间煮雨</a>
-    </h1>
+  <ul class="pure-menu-list clearfix">
+      
+          
+            <li class="pure-menu-item"><a href="/" class="pure-menu-link">首页</a></li>
+          
+      
+          
+            <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+          
+      
+          
+            <li class="pure-menu-item"><a href="/tags" class="pure-menu-link">标签</a></li>
+          
+      
+          
+            <li class="pure-menu-item"><a href="/search" class="pure-menu-link">搜索</a></li>
+          
+      
+          
+            <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+          
+      
+  </ul>
+   
+</nav>
+  </div>
 
-    <nav id="nav-top">
-        
-            <ul id="menu-top" class="nav-top-items">
-                
-                    <li class="menu-item">
-                        <a href="/archives">
-                            
-                            
-                                Archives
-                            
-                        </a>
-                    </li>
-                
-                    <li class="menu-item">
-                        <a href="/about">
-                            
-                            
-                                About
-                            
-                        </a>
-                    </li>
-                
-            </ul>
-        
-  </nav>
-</div>
-
-      </header>
-      <div id="content">
-        
-    <div id="primary">
-        
-  <article class="post">
-    <header class="post-header">
-      <h1 class="post-title">
-        
-          Shellcode
-        
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Shellcode
       </h1>
-
-      <time class="post-time">
-          Mar 28 2020
+      <span>
+        
+        <time class="time" datetime="2020-03-28T13:39:45.000Z">
+        2020-03-28
       </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/pwn/" rel="tag">pwn</a></li></ul>
+      </span>
+    </span>
+      <span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>
     </header>
 
+    <div class="post-content">
+      <p>本文为《由浅入深理解shellcode》系列文章第一篇，记录下自己学习的过程和体会。系列文章会持续更更新，从不同角度学习shellcode的原理。</p>
+<a id="more"></a>
 
-
-    
-            <div class="post-content">
-            <p>本文为《由浅入深理解shellcode》系列文章第一篇，记录下自己学习的过程和体会。系列文章会持续更更新，从不同角度学习shellcode的原理。</p>
 <h3 id="0x01-什么是shellcode"><a href="#0x01-什么是shellcode" class="headerlink" title="0x01 什么是shellcode"></a>0x01 什么是shellcode</h3><p>我们见到的shellcode是这样的</p>
 <img src="/2020/03/28/shellcode/shellcode.png" style="zoom:60%;">
 
@@ -218,88 +178,191 @@
 <h3 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h3><p><a href="https://xz.aliyun.com/t/2052" target="_blank" rel="noopener">https://xz.aliyun.com/t/2052</a></p>
 <p><a href="https://learn-linux.readthedocs.io/zh_CN/latest/system-programming/syscall/principle.html" target="_blank" rel="noopener">https://learn-linux.readthedocs.io/zh_CN/latest/system-programming/syscall/principle.html</a></p>
 
-            </div>
-          
+    </div>
 
+    <div>the end 。</div>
+  </article>
+  <div class="toc-container">
     
-      <footer class="post-footer">
-		
-		<div class="post-tags">
-		  
-			<a href="/tags/pwn/">pwn</a>
-		  
-		</div>
-		
-
-        
-        
-  <nav class="post-nav">
-    
-      <a class="prev" href="/2020/03/29/function-c/">
-        <i class="iconfont icon-left"></i>
-        <span class="prev-text nav-default">C语言函数调用栈</span>
-        <span class="prev-text nav-mobile">Prev</span>
-      </a>
-    
-    
-      <a class="next" href="/2020/03/27/%E5%B7%AE%E8%B7%9D/">
-        <span class="next-text nav-default">差距</span>
-        <span class="prev-text nav-mobile">Next</span>
-        <i class="iconfont icon-right"></i>
-      </a>
-    
-  </nav>
-
-        
-  <div class="comments" id="comments">
-    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#0x01-什么是shellcode"><span class="toc-text">0x01 什么是shellcode</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#0x02-shellcode实现分步来看"><span class="toc-text">0x02 shellcode实现分步来看</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#0x021-系统调用过程"><span class="toc-text">0x021 系统调用过程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#0x022-shellcode载入（init-0x80-中断实现execve过程）"><span class="toc-text">0x022 shellcode载入（init 0x80 中断实现execve过程）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#0x023-shellcode编写"><span class="toc-text">0x023 shellcode编写</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#0x023-shellcode机器码提取"><span class="toc-text">0x023 shellcode机器码提取</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#0x024-shellcode加载（c语言实现）"><span class="toc-text">0x024 shellcode加载（c语言实现）</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#0x03-总结"><span class="toc-text">0x03 总结</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#0x04-参考"><span class="toc-text">0x04 参考</span></a></li></ol>
   </div>
 
 
-      </footer>
-    
-  </article>
+  </div>
+</div>
+<div class="copyright">
+</div>
+<div class="share" style="width: 100%;">
+
+  <div style="margin: auto; text-align: center; font-size: 0.8em; color: grey;">What you see is not What you get</div>
+  
+</div>
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/07/04/Emergency/" rel="next" title="Emergency">
+          Emergency
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/03/29/function-c/" rel="prev" title="C语言函数调用栈">
+            C语言函数调用栈
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
 
     </div>
 
-      </div>
-
-      <footer id="colophon"><span class="copyright-year">
     
-        &copy;
-    
-        2019 -
-    
-    2020
-    <span class="footer-author">1997CN.</span>
-</span>
 
-      </footer>
-
-      <div class="back-to-top" id="back-to-top">
-        <i class="iconfont icon-up"></i>
-      </div>
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <a class="bottom-item" href="https://1997cn.github.io" target="_blank">Powered by 1997CN</a> |
     </div>
-    
+</footer>
+  
 
+<script>
+  (function(window, document, undefined) {
 
-    
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
   
 
 
 
-
-
-  
-    <script type="text/javascript" src="/lib/jquery/jquery-3.1.1.min.js"></script>
-  
-
-  
-    <script type="text/javascript" src="/lib/fancybox/jquery.fancybox.pack.js"></script>
-  
-
-    <script type="text/javascript" src="/js/src/theme.js?v=1.1"></script>
-<script type="text/javascript" src="/js/src/bootstrap.js?v=1.1"></script>
-
-  </body>
+</body>
 </html>
